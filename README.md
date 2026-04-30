@@ -2,69 +2,69 @@
 
 面向边缘侧大模型推理部署、KV Cache 管理与异构硬件加速的研究型实验框架。
 
-本项目的核心目标，不是简单完成“大模型部署”，而是通过系统化的 profiling、benchmark 与实验分析，研究资源受限环境下 LLM inference 的真实性能瓶颈，并逐步延伸到 KV Cache 优化、CUDA microbenchmark、FPGA/HLS decode kernel 设计，以及面向异构硬件的 dataflow 自动生成。
+本项目聚焦资源受限环境（单卡 GPU、边缘服务器、小型工作站等）中的大模型推理性能问题，围绕 LLM inference 的实际瓶颈展开系统性研究，重点关注：
 
-本项目首先是：
+* Prefill latency 的增长规律
+* Decode latency 的主要影响因素
+* KV Cache 的显存占用与带宽压力
+* 不同量化方式（FP16 / INT8 / INT4）带来的性能变化
+* Decode kernel 的 CUDA 优化潜力与 FPGA/HLS 映射可行性
 
-**科研型开源项目（Research-oriented Open Source Project）**
+在此基础上，项目将逐步扩展至：
 
-而不是：
+* CUDA microbenchmark
+* KV Cache Compression / Migration
+* GPU / FPGA 异构执行
+* Decode Kernel 的 HLS 实现
+* 面向边缘侧 LLM 的 Heterogeneous Inference System
 
-**产品型工程项目（Product-oriented Engineering Project）**
-
-重点是构建可复现、可扩展、可用于博士申请展示的科研成果。
-
----
-
-# 一、研究背景
-
-随着大模型（LLM）逐步从云端走向边缘侧部署，低资源设备（如单卡 GPU、小型工作站、边缘服务器、嵌入式平台）上的推理性能问题越来越重要。
-
-与云端高吞吐场景不同，边缘侧更关注：
-
-- 单请求延迟（Latency）
-- 首 Token 时间（TTFT, Time To First Token）
-- 单 Token 解码延迟（TPOT, Time Per Output Token）
-- 显存占用（Memory Footprint）
-- KV Cache 开销（KV Cache Overhead）
-- Prefill / Decode 阶段性能差异
-- 量化（Q4 / Q8 / FP16）带来的性能权衡
-
-尤其在 Decode 阶段，KV Cache 的存储、读取、迁移与压缩，往往成为系统性能瓶颈。
-
-因此，本项目希望从：
-
-**GPU + CUDA + LLM inference profiling**
-
-作为第一阶段切入点，而不是直接从 FPGA 开始。
-
-因为：
-
-- GPU 更接近真实系统瓶颈
-- 能更快形成实验结果
-- CUDA 是 AI System 的基础能力
-- 后续 FPGA/HLS 优化必须建立在真实瓶颈分析之上
+本项目定位为长期持续迭代的科研型开源项目，目标是形成可复现、可扩展、具备博士申请展示价值的系统性研究成果。
 
 ---
 
-# 二、第一阶段目标（Stage 1）
+# 一、当前核心任务（Current Focus）
 
-## LLM Inference Profiling Framework
+## Experiment 001：Gemma Baseline Profiling Framework
 
-构建一个可复现的实验框架，用于分析：
+第一阶段的重点是建立基础实验框架，围绕一个明确问题开展分析：
 
-- Prefill latency
-- Decode latency
-- KV Cache behavior
-- Quantization impact
-- GPU memory bottleneck
-- 不同 prompt / output length 对性能的影响
+> 在资源受限 GPU 环境下，小型 decoder-only LLM 的 prefill latency、decode latency 与 KV Cache 显存开销，将如何随着输入长度（Prompt Length）和输出长度（Generation Length）变化？
 
-重点研究问题：
+这一问题构成整个项目的起点，也是后续 CUDA 优化、KV Cache 管理和 FPGA/HLS 设计的基础。
 
-> 在资源受限 GPU 环境下，小型 decoder-only LLM 的 prefill/decode latency 与 KV Cache 显存开销，如何随输入长度、输出长度和量化方式变化？
+当前阶段的主要任务是：
 
-这是整个项目的第一阶段核心问题。
+* 建立可复现的 profiling 流程
+* 获取结构化实验数据
+* 输出性能图表与分析结论
+* 明确系统中的主要瓶颈位置
+
+研究工作的前提是对问题本身有准确判断，因此第一阶段的重点放在测量与分析，而不是直接进入优化阶段。
+
+---
+
+# 二、从 GPU Profiling 开始的原因
+
+项目第一阶段选择：
+
+## GPU + CUDA + LLM Inference Profiling
+
+主要考虑如下：
+
+* GPU 更接近真实部署环境中的性能瓶颈
+* 实验周期更短，更容易形成初步结果
+* CUDA 是后续 AI System 研究的重要基础能力
+* FPGA/HLS 优化需要建立在真实性能分析之上
+
+如果无法明确：
+
+* 延迟主要集中在哪个阶段
+* 显存瓶颈出现在哪里
+* KV Cache 是否构成核心限制因素
+
+那么后续硬件优化工作很容易偏离真正的问题。
+
+Profiling 的意义就在于建立这一层判断依据。
 
 ---
 
@@ -72,37 +72,73 @@
 
 ## Gemma Baseline Profiling on Colab
 
-使用 Google Gemma 小模型，在 Colab GPU 环境下建立 baseline profiling。
+使用 Google Gemma 小模型（优先选择 Gemma 4 E2B），在 Colab GPU 环境下完成 baseline profiling。
 
 ## 实验目标
 
-建立边缘侧 LLM inference 的基础性能画像（baseline）。
+建立边缘侧 LLM inference 的基础性能画像，重点分析：
 
-## 主要指标
+* Prefill latency
+* Decode latency
+* KV Cache behavior
+* GPU Memory bottleneck
 
-### 延迟指标
-
-- TTFT（Time To First Token）
-- TPOT（Time Per Output Token）
-- Tokens/s（吞吐率）
-
-### 显存指标
-
-- Peak GPU Memory
-- KV Cache Estimated Size
-
-### 控制变量
-
-- Prompt Length
-- Generation Length
-- Batch Size（后续）
-- FP16 / INT8 / INT4（后续）
+通过基础实验，形成对小模型推理行为的初步认识，并为后续扩展实验提供基线参考。
 
 ---
 
-# 四、当前项目结构
+## 主要观测指标
 
-```text
+### 延迟指标
+
+* TTFT（Time To First Token）
+* TPOT（Time Per Output Token）
+* Tokens/s（吞吐率）
+
+### 显存指标
+
+* Peak GPU Memory
+* GPU Memory Allocation
+* KV Cache Estimated Size
+
+### 控制变量
+
+* Prompt Length
+* Generation Length
+* Batch Size（后续阶段）
+* Quantization（后续阶段）
+
+---
+
+# 四、当前阶段的研究边界
+
+为保证研究工作具备明确目标，第一阶段暂不涉及以下内容：
+
+* 模型训练
+* 模型微调（Fine-tuning）
+* RAG 系统
+* Agent 系统
+* 聊天机器人产品开发
+* 前端 UI 与 Web 服务
+* Docker 工程化部署
+* FPGA kernel 实现
+* MLIR Pass 开发
+
+当前阶段集中于：
+
+* 测量（Measure）
+* 记录（Record）
+* 分析（Analyze）
+* 可视化（Visualize）
+* 瓶颈识别（Identify Bottlenecks）
+
+重点在于理解系统行为，而非过早进入复杂优化。
+
+---
+
+# 五、当前项目结构
+
+```text id="oq5ckl"
 EdgeLLM-HeteroLab/
 │
 ├── README.md
@@ -120,3 +156,41 @@ EdgeLLM-HeteroLab/
 ├── results/
 │
 └── requirements.txt
+```
+
+---
+
+# 六、后续研究方向（Stage 2+）
+
+在完成 Experiment 001 后，项目将继续推进：
+
+* FlashAttention / Paged Attention 分析
+* KV Cache Compression
+* KV Cache Migration
+* Decode Kernel CUDA Profiling
+* GPU / FPGA 异构执行
+* Decode Kernel 的 HLS 实现
+* FPGA Dataflow 自动生成
+* MLIR / Polyhedral Optimization
+
+并进一步与以下方向形成研究衔接：
+
+* POM
+* CODO
+* MLIR-based FPGA Compiler
+* FPGA Dataflow Optimization
+
+整体推进方式遵循逐步深入原则，以实验结果为基础持续扩展研究范围。
+
+---
+
+# 七、项目定位
+
+本项目服务于博士申请阶段的长期科研积累，核心目标包括：
+
+* 构建持续迭代的独立研究项目
+* 形成可展示的科研成果与系统能力
+* 建立 AI System 与异构计算方向的研究基础
+* 为后续学术研究与独立开发提供长期支撑
+
+研究工作的重点不在于短期完成多少功能，而在于持续形成具有明确价值和可验证结果的技术资产。

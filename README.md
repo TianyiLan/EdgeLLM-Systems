@@ -29,7 +29,8 @@
 
 当前阶段的核心任务，是建立第一版 LLM inference profiling framework。
 
-使用 Google Gemma 小模型（优先 Gemma 4 E2B），在 Colab GPU 环境下完成 baseline profiling，重点分析：
+使用 Google Gemma 系列小模型进行 baseline profiling。长期目标模型优先选择 Gemma 4 E2B，用于后续系统分析与异构硬件优化研究。考虑到当前阶段使用 Colab 免费版 Tesla T4（16GB 显存）进行实验，Experiment 001 第一阶段优先采用Gemma 2 2B Instruct 版本建立稳定、可复现的 profiling baseline。待实验框架稳定后，再扩展至 Gemma 4 E2B 进行对照分析。
+重点分析：
 
 * Prefill latency
 * Decode latency

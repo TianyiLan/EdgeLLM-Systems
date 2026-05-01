@@ -63,8 +63,16 @@ GPU：
 
 #### 模型
 
-- Google Gemma（优先选择 Gemma 4 E2B）；
-- 若环境兼容性或资源限制导致模型无法稳定运行，则使用 Gemma 2B / 4B 作为替代模型。
+本项目长期目标模型优先选择 Google Gemma 4 E2B，
+用于后续边缘侧推理系统分析与异构硬件优化研究。
+
+考虑到当前阶段使用 Google Colab 免费版 Tesla T4（16GB 显存）
+进行 baseline profiling，优先保证实验的稳定性、可复现性与低成本验证，
+因此 Experiment 001 第一阶段采用 Gemma 2 2B Instruct 版本
+作为基础测试模型。
+
+待 profiling framework 完成并验证稳定后，
+将进一步扩展至 Gemma 4 E2B 进行对照实验与系统分析。
 
 #### 工具
 

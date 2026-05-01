@@ -37,10 +37,29 @@
 
 ### 3. 实验环境（Environment）
 
-#### 运行平台
+#### 当前实际运行环境（Colab Baseline）
 
-- Google Colab（优先使用免费版）；
-- 单卡 GPU 环境。
+运行平台：
+
+- Google Colab（免费版）
+
+GPU：
+- Tesla T4
+- CUDA Available: True
+- CUDA Version: 12.8
+- GPU Memory: 16 GB
+
+软件环境：
+- Python: 3.12.13
+- PyTorch: 2.10.0+cu128
+- Transformers: 5.0.0
+
+说明：
+当前实验使用 Colab 免费版 T4 GPU 作为 baseline profiling 平台。  
+该环境能够稳定支持 Gemma 小模型推理实验，并具备后续 TTFT、TPOT、显存峰值及 KV Cache 分析所需的基础条件。
+
+本实验后续所有 baseline 数据，均以该环境作为统一测试平台。
+
 
 #### 模型
 

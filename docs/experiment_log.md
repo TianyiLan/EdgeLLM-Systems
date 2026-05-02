@@ -181,13 +181,12 @@ KV Cache 显存通常需要通过间接方式估算，而非直接读取。
 
 ### 8. 下一步计划（Next Steps）
 
-下一阶段任务如下：
+Experiment 001 baseline profiling 已完成，下一阶段进入 Stage 2：
 
-1. 完成 Gemma baseline inference 跑通。
-2. 记录第一组基础数据，包括 TTFT、TPOT 与 Peak GPU Memory。
-3. 建立 Prompt Length / Generation Length 对比实验。
-4. 输出第一版 profiling 图表。
-5. 进入 Stage 2：KV Cache System Analysis，继续深入分析系统瓶颈。
+1. 扩展 prompt_len 至 1024 / 2048，重跑 profiling，定位 KV Cache 从"可忽略"变为"显存主要占用者"的临界点。
+2. 分析更长序列下 TPOT 是否随 KV Cache 增长而上升（验证 memory-bandwidth bound 假设的边界）。
+3. 建立 KV Cache 显存的实测方法（显存差分），补充理论估算的不足。
+4. 进入 Stage 2：KV Cache System Analysis，深入分析 KV Cache 布局与压缩可行性。
 
 ### 9. 当前原则（Guiding Principle）
 
@@ -211,6 +210,7 @@ KV Cache 显存通常需要通过间接方式估算，而非直接读取。
 **环境**：Google Colab 免费版 · Tesla T4 (16GB) · FP16  
 **模型**：google/gemma-2-2b-it  
 **框架**：HuggingFace Transformers + PyTorch  
+**Notebook**：`notebooks/exp001_gemma_baseline_Colab.ipynb`  
 
 ---
 
@@ -297,7 +297,7 @@ WARMUP_CONFIGS = [
 | 512 | 64 | 186.98 | 58.11 | 17.2 | 5548.9 | 58.5 |
 | 512 | 128 | 185.24 | 51.65 | 19.4 | 5548.9 | 65.0 |
 
-可视化图表见：`docs/figures/exp001_profiling_results.png`
+可视化图表见：`results/exp001/figures/exp001_profiling_results.png`
 
 ---
 

@@ -181,12 +181,12 @@ KV Cache 显存通常需要通过间接方式估算，而非直接读取。
 
 ### 8. 下一步计划（Next Steps）
 
-Experiment 001 baseline profiling 已完成，下一阶段进入 Stage 2：
+Experiment 001 baseline profiling 的基础数据已完成，但 measurement protocol 仍在校准收尾阶段，下一步先完成 KV Cache measurement correction：
 
 1. 扩展 prompt_len 至 1024 / 2048，重跑 profiling，定位 KV Cache 从"可忽略"变为"显存主要占用者"的临界点。
 2. 分析更长序列下 TPOT 是否随 KV Cache 增长而上升（验证 memory-bandwidth bound 假设的边界）。
-3. 建立 KV Cache 显存的实测方法（显存差分），补充理论估算的不足。
-4. 进入 Stage 2：KV Cache System Analysis，深入分析 KV Cache 布局与压缩可行性。
+3. 建立 KV Cache payload 的实测方法（`past_key_values` tensor payload 统计），补充理论估算并修正显存差分法的不足。
+4. 在 measurement protocol calibration 完成后，再进入 Stage 2：KV Cache System Analysis，深入分析 KV Cache 布局与压缩可行性。
 
 ### 9. 当前原则（Guiding Principle）
 
@@ -413,4 +413,56 @@ memory-bandwidth bound 结论在当前范围内继续成立。
 v2 实验已提供定量基础：临界点约在 **8192 tokens**，届时 KV Cache 与模型权重量级相当。
 Stage 2 将以此为起点，深入分析 KV Cache 布局与压缩可行性。
 
-**Stage 1 数据采集已全部完成，可进入 Stage 2。**
+**Stage 1 基础数据采集已完成；measurement protocol calibration 正在收尾，尚未正式进入 Stage 2。**
+
+---
+
+## Experiment 001-PKV: KV Cache Measurement Correction with past_key_values
+
+### Motivation
+
+Experiment 001 的早期 V2 版本尝试使用 CUDA memory delta / peak memory 来估计 KV Cache 实际占用。该方法能够反映系统级显存压力，但不适合作为 pure KV cache measurement。
+
+原因是 CUDA memory delta / peak memory 会混入大量 non-KV runtime overhead，包括模型权重、PyTorch allocator reserved memory、临时 activation、logits、attention workspace、CUDA runtime buffer 以及显存碎片等。因此，早期 `kv_actual_mb` 与 theoretical KV cache formula 相差约 5x，不能直接解释为 KV Cache payload 本身变大。
+
+为修正测量协议，本次实验将 pure KV cache measurement 从 CUDA memory-delta based 方法改为 `past_key_values` payload measurement。
+
+### Method
+
+新的测量方法直接使用模型 forward 输出中的 `outputs.past_key_values`，递归统计其中 K/V tensors 的：
+
+```text
+numel × element_size
+```
+
+该方法只统计实际保留下来供 decode 复用的 K/V tensor payload，不包含 allocator、activation、logits、attention workspace 或其他 runtime overhead。
+
+实验中同时保留 `peak_mem_mb`，但其含义被重新定义为 system-level memory pressure 指标，不再作为 pure KV cache measurement。当前记录的主要 KV 指标包括：
+
+* `kv_est_mb`：基于模型结构参数的 theoretical formula；
+* `kv_pkv_prefill_mb`：prefill 后的 `past_key_values` payload，cache length = prompt_len；
+* `kv_pkv_final_mb`：decode 完成后的 `past_key_values` payload，cache length = prompt_len + generated_len；
+* `peak_mem_mb`：CUDA peak memory，仅用于观察系统级显存压力。
+
+本次 PKV correction 仍使用 3-run average，并扩展 prompt length 至 1024 / 2048 tokens。最新结果见：
+
+* `results/exp001/exp001_results_pkv.csv`
+* `results/exp001/figures/exp001_profiling_results_pkv.png`
+
+### Results
+
+根据最新 PKV CSV 与总览图片，主要结果如下：
+
+* TTFT 随 prompt length 增长明显：512 tokens 约 170 ms，1024 tokens 约 400 ms，2048 tokens 约 1.0 s。
+* TPOT 在不同 prompt length 下基本稳定，主要集中在约 50 ms/token 附近，说明当前实验范围内 decode latency 仍较稳定。
+* PKV measured KV cache 与 theoretical formula 基本重合。例如 2048 prompt、128 generated tokens 下，`kv_est_mb = 221.0 MB`，`kv_pkv_final_mb = 221.0 MB`。
+* `kv_pkv_prefill_mb < kv_pkv_final_mb` 是合理现象，因为 prefill cache length = prompt_len，而 final cache length = prompt_len + generated_len。
+* CUDA peak memory 远大于 PKV payload。例如 2048 prompt 下，`peak_mem_mb ≈ 8425 MB`，而 `kv_pkv_final_mb ≈ 211-221 MB`。这说明系统显存峰值中的大部分不是 KV Cache payload，而是模型权重与 runtime/allocator/temporary tensor overhead。
+
+### Conclusion
+
+`past_key_values`-based payload measurement is accepted as the primary pure KV cache measurement protocol for subsequent experiments.
+
+CUDA peak memory will only be used as a system-level memory metric. It should not be interpreted as pure KV cache size.
+
+Stage 1 measurement protocol calibration is being finalized. Stage 2 will begin only after the baseline inference, repeated-run latency metrics, PKV/formula alignment, CUDA peak memory interpretation, and experiment log correction are all complete.

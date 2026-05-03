@@ -27,7 +27,7 @@
 
 ## Experiment 001：Gemma Baseline Profiling
 
-当前阶段的核心任务，是建立第一版 LLM inference profiling framework。
+当前阶段的核心任务，是建立第一版 LLM inference profiling framework。Experiment 001 仍处于 Stage 1 的 measurement calibration 阶段，当前重点是收尾并固化可信的测量协议，而不是进入 Stage 2 优化分析。
 
 使用 Google Gemma 系列小模型进行 baseline profiling。长期目标模型优先选择 Gemma 4 E2B，用于后续系统分析与异构硬件优化研究。考虑到当前阶段使用 Colab 免费版 Tesla T4（16GB 显存）进行实验，Experiment 001 第一阶段优先采用Gemma 2 2B Instruct 版本建立稳定、可复现的 profiling baseline。待实验框架稳定后，再扩展至 Gemma 4 E2B 进行对照分析。
 重点分析：
@@ -36,8 +36,18 @@
 * Decode latency
 * TTFT / TPOT
 * GPU 显存峰值
-* KV Cache 基础开销
+* KV Cache payload 开销
 * Prompt Length / Generation Length 对性能的影响
+
+最近一次校准中，原来的 CUDA memory-delta based KV cache measurement 被证明会混入大量 non-KV runtime overhead，包括 allocator 行为、临时 activation、logits、attention workspace 等，因此实测值显著高于理论 KV Cache 大小。当前已改用 `past_key_values` payload measurement：直接统计 K/V tensors 的 `numel × element_size`，作为 pure KV cache measurement。
+
+当前核心发现：
+
+* PKV measured KV cache 与 theoretical formula 基本一致；
+* CUDA peak memory 显著大于纯 KV payload；
+* peak memory 适合作为 system-level memory pressure 指标，但不适合作为 pure KV cache measurement；
+* prefill PKV 小于 final PKV 是合理的，因为 prefill 只包含 prompt tokens，而 final PKV 包含 prompt + generated tokens；
+* Stage 1 measurement protocol calibration is being finalized。
 
 核心研究问题：
 

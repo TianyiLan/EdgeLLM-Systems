@@ -306,6 +306,8 @@ WARMUP_CONFIGS = [
 **日期**：2026年5月  
 **改进**：每组参数重复 3 次取均值；新增 `kv_actual_mb`（显存差分实测）；扩展 prompt_len 至 1024/2048
 
+> **Measurement note**：V2 memory-delta KV measurement is deprecated for pure KV cache measurement. It is retained only as a historical system-level memory observation.
+
 | prompt | gen | TTFT(ms) | TPOT(ms) | tok/s | peak(MB) | kv_est(MB) | kv_actual(MB) |
 |---|---|---|---|---|---|---|---|
 | 64 | 32 | — | 52.4 | — | — | 9.75 | 38.51 |
@@ -364,28 +366,28 @@ KV Cache 估算最大值为 65MB（prompt=512, gen=128），
 这个比例关系将在更长序列下发生变化——KV Cache 会成为
 显存瓶颈，这是 Stage 2 的核心研究问题。
 
-**结论5（v2 补充）：KV Cache 实测值约为理论估算的 5 倍，但增长严格线性**
+**结论5（v2 历史观察）：CUDA memory-delta 结果包含显著 non-KV overhead**
 
-显存差分法实测 KV Cache：序列每翻倍，实测值精确翻倍（误差 <2%）。
+V2 CUDA memory-delta result was later found to include substantial non-KV overhead and is therefore kept only as a historical system-level memory observation.
+
+当时的显存差分结果如下：
 ```
 38.51 → 75.51 → 152.01 → 302.01 → 609.01 → 1208.01 MB
 ```
-差距来自激活值（attention 中间计算结果）和 PyTorch 预分配 buffer，
-不影响增长趋势分析，O(n) 结论成立。
+这些数值不再作为 pure KV cache measurement 结论依据。它们更适合解释 CUDA runtime / allocator / temporary tensor overhead 随序列长度变化的系统级显存行为。
 
-**结论6（扩展序列）：TTFT 在 1024+ 时出现超线性增长；KV Cache 成为显存压力的临界点约在 8192 tokens**
+**结论6（扩展序列）：TTFT 在 1024+ 时出现超线性增长；8192-token KV 阈值需要 PKV 重新评估**
 
 ```
-prompt=512:  TTFT ~172ms，KV Cache 占显存 5.4%（302/5548MB）
+prompt=512:  TTFT ~172ms
 prompt=1024: TTFT ~412ms（序列翻倍，耗时 2.4x，开始超线性）
-prompt=2048: TTFT ~1033ms（序列翻倍，耗时 2.5x），KV Cache 占显存 16.7%
+prompt=2048: TTFT ~1033ms（序列翻倍，耗时 2.5x）
 ```
 512 以内 TTFT 接近线性，1024 之后偏离，说明 attention 的 O(n²)
 计算开销在长序列下开始显现。TPOT 在 2048 时仍稳定（47~55ms），
 memory-bandwidth bound 结论在当前范围内继续成立。
 
-按线性外推，prompt≈8192 时 KV Cache（~4.8GB）将与模型权重（~4.5GB）量级相当，
-届时成为显存主要压力——这是 Stage 2 的核心研究问题。
+The 8192-token estimate was based on deprecated memory-delta measurement and should not be used as a pure KV cache threshold without PKV-based re-evaluation.
 
 ---
 
@@ -393,8 +395,8 @@ memory-bandwidth bound 结论在当前范围内继续成立。
 
 - [x] TPOT 在部分短 prompt 组合下存在轻微抖动（±15ms）
       → **已解决**：v2 重复 3 次取均值后抖动消失，确认为测量噪声而非系统性差异
-- [x] prompt_len 上限只到 512，更长序列（1024/2048）的 KV Cache 压力尚未测量
-      → **已完成**：v2 实验扩展至 2048，结论见结论6
+- [x] prompt_len 上限只到 512，更长序列（1024/2048）的延迟与系统级显存压力尚未测量
+      → **已完成**：v2 实验扩展至 2048；pure KV cache 结论以后续 PKV correction 为准
 - [ ] v2 图表存在中文乱码（Kaggle 字体缺失），需修复后重新生成
 - [ ] 当前只测了 FP16，INT8/INT4 量化下的性能变化留待后续
 - [ ] Tokens/s 在 gen=64 时出现规律性下降，原因待分析
@@ -410,8 +412,9 @@ memory-bandwidth bound 结论在当前范围内继续成立。
 > 此时 decode 的 memory-bandwidth bound 特征会如何演变？
 > KV Cache 的布局和压缩方式能否缓解这一瓶颈？**
 
-v2 实验已提供定量基础：临界点约在 **8192 tokens**，届时 KV Cache 与模型权重量级相当。
-Stage 2 将以此为起点，深入分析 KV Cache 布局与压缩可行性。
+V2 memory-delta measurement only provides historical system-level memory observations. The earlier **8192 tokens** estimate was based on deprecated memory-delta measurement and should not be used as a pure KV cache threshold without PKV-based re-evaluation.
+
+Stage 2 remains the next stage. It will start only after Stage 1 measurement protocol calibration is finalized.
 
 **Stage 1 基础数据采集已完成；measurement protocol calibration 正在收尾，尚未正式进入 Stage 2。**
 
@@ -461,8 +464,8 @@ numel × element_size
 
 ### Conclusion
 
-`past_key_values`-based payload measurement is accepted as the primary pure KV cache measurement protocol for subsequent experiments.
+`past_key_values` payload is the primary pure KV cache metric; CUDA peak memory is only a system-level memory pressure metric.
 
-CUDA peak memory will only be used as a system-level memory metric. It should not be interpreted as pure KV cache size.
+`past_key_values`-based payload measurement is accepted as the primary pure KV cache measurement protocol for subsequent experiments. CUDA peak memory should not be interpreted as pure KV cache size.
 
 Stage 1 measurement protocol calibration is being finalized. Stage 2 will begin only after the baseline inference, repeated-run latency metrics, PKV/formula alignment, CUDA peak memory interpretation, and experiment log correction are all complete.

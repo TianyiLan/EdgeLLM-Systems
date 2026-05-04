@@ -13,9 +13,14 @@ import pandas as pd
 
 def plot_exp001(csv_path: Path, output_path: Path) -> None:
     """Create the Experiment 001 PKV overview figure."""
+    # The plotting script consumes a result CSV only. It does not rerun models.
     df = pd.read_csv(csv_path)
+
+    # Use linear x-axis spacing so prompt length growth is visually meaningful.
     all_prompt_lens = sorted(df["prompt_len"].unique())
     gen_len_list = sorted(df["gen_len"].unique())
+
+    # Stable colors make figures comparable across reruns.
     color_map = {32: "#4C9BE8", 64: "#F5A623", 128: "#7ED321"}
 
     fig = plt.figure(figsize=(18, 10))
@@ -33,6 +38,7 @@ def plot_exp001(csv_path: Path, output_path: Path) -> None:
     ax4a = fig.add_subplot(gs[1, 2])
     ax4b = fig.add_subplot(gs[1, 3])
 
+    # 1. Prefill latency: should grow with prompt length.
     for gl in gen_len_list:
         sub = df[df["gen_len"] == gl].sort_values("prompt_len")
         ax1.plot(
@@ -51,6 +57,7 @@ def plot_exp001(csv_path: Path, output_path: Path) -> None:
     ax1.legend()
     ax1.grid(True, alpha=0.3)
 
+    # 2. Decode latency: expected to stay relatively flat in this range.
     for gl in gen_len_list:
         sub = df[df["gen_len"] == gl].sort_values("prompt_len")
         ax2.plot(
@@ -70,6 +77,7 @@ def plot_exp001(csv_path: Path, output_path: Path) -> None:
     ax2.legend()
     ax2.grid(True, alpha=0.3)
 
+    # 3. System-level memory pressure, not pure KV cache payload.
     for gl in gen_len_list:
         sub = df[df["gen_len"] == gl].sort_values("prompt_len")
         ax3.plot(
@@ -89,6 +97,7 @@ def plot_exp001(csv_path: Path, output_path: Path) -> None:
     ax3.legend()
     ax3.grid(True, alpha=0.3)
 
+    # 4-A. Compare formula and measured PKV on the longest generation length.
     representative_gen = max(gen_len_list)
     sub_rep = df[df["gen_len"] == representative_gen].sort_values("prompt_len")
     ax4a.plot(
@@ -117,6 +126,7 @@ def plot_exp001(csv_path: Path, output_path: Path) -> None:
     ax4a.legend(fontsize=8)
     ax4a.grid(True, alpha=0.3)
 
+    # 4-B. Show how generation length shifts final PKV payload.
     for gl in gen_len_list:
         sub = df[df["gen_len"] == gl].sort_values("prompt_len")
         ax4b.plot(
@@ -135,12 +145,14 @@ def plot_exp001(csv_path: Path, output_path: Path) -> None:
     ax4b.grid(True, alpha=0.3)
     ax4b.legend(title="Gen Length", fontsize=8, title_fontsize=8, loc="upper left")
 
+    # Keep file creation inside the script so callers can pass new output paths.
     output_path.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(output_path, dpi=150, bbox_inches="tight")
     print(f"Figure saved: {output_path}")
 
 
 def main() -> None:
+    # CLI wrapper; notebooks can import and call plot_exp001 directly.
     parser = argparse.ArgumentParser()
     parser.add_argument("--csv", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)

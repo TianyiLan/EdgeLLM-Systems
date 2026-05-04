@@ -10,6 +10,8 @@ DEFAULT_BASE_PROMPT = "The quick brown fox jumps over the lazy dog. "
 
 def build_prompt(prompt_len: int, base_prompt: str = DEFAULT_BASE_PROMPT) -> str:
     """Build a repeated stable prompt long enough for token truncation."""
+    # The exact text is less important than keeping it stable across runs.
+    # The tokenizer will truncate to the requested token length later.
     repeat = prompt_len // 10 + 1
     return base_prompt * repeat
 
@@ -22,6 +24,8 @@ def build_prompt_inputs(
 ) -> Any:
     """Tokenize a fixed prompt and truncate it to the requested length."""
     prompt = build_prompt(prompt_len, base_prompt)
+
+    # return_tensors="pt" creates PyTorch tensors; .to(device) moves them to GPU.
     return tokenizer(
         prompt,
         return_tensors="pt",

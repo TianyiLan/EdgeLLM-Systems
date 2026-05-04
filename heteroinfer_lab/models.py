@@ -24,6 +24,9 @@ def load_causal_lm(
     if model_dir is not None:
         model_name = model_id.split("/")[-1]
         local_path = Path(model_dir) / model_name
+
+        # Colab sessions are temporary, but Google Drive persists. Reusing a
+        # Drive cache avoids downloading Gemma weights on every run.
         if local_path.is_dir() and any(local_path.iterdir()):
             model_path = local_path
         else:
@@ -35,7 +38,10 @@ def load_causal_lm(
             )
             model_path = local_path
 
+    # Tokenizer and model must be loaded from the same path/revision.
     tokenizer = AutoTokenizer.from_pretrained(model_path)
+
+    # device_map="auto" lets Accelerate place the model on the available GPU.
     model = AutoModelForCausalLM.from_pretrained(
         model_path,
         torch_dtype=torch_dtype,

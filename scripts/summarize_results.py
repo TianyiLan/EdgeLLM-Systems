@@ -8,10 +8,13 @@ from pathlib import Path
 
 
 def as_float(row: dict[str, str], key: str) -> float:
+    """Read one CSV field as float."""
     return float(row[key])
 
 
 def summarize(csv_path: Path) -> None:
+    """Print high-level ranges for quick sanity checks."""
+    # This script uses only the standard library so it can run in minimal envs.
     with csv_path.open("r", encoding="utf-8", newline="") as f:
         rows = list(csv.DictReader(f))
 
@@ -19,6 +22,7 @@ def summarize(csv_path: Path) -> None:
         print(f"No rows found: {csv_path}")
         return
 
+    # Pull each metric into a list so min/max ranges are easy to inspect.
     ttft = [as_float(row, "ttft_ms") for row in rows]
     tpot = [as_float(row, "tpot_ms") for row in rows]
     peak = [as_float(row, "peak_mem_mb") for row in rows]
@@ -35,6 +39,7 @@ def summarize(csv_path: Path) -> None:
 
 
 def main() -> None:
+    # CLI wrapper for quick local checks.
     parser = argparse.ArgumentParser()
     parser.add_argument("csv", type=Path)
     args = parser.parse_args()

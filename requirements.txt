@@ -1,1 +1,9 @@
-
+accelerate
+huggingface_hub
+matplotlib
+numpy
+pandas
+pyyaml
+sentencepiece
+torch
+transformers

@@ -1,8 +1,8 @@
-# HeteroInfer-Lab 技术路线图
+# EdgeLLM-Systems 技术路线图
 
 ## 一、项目目标
 
-HeteroInfer-Lab 聚焦资源受限边缘环境下的大模型推理系统研究，面向单卡 GPU（Graphics Processing Unit，图形处理器）、边缘服务器、小型工作站、FPGA（Field Programmable Gate Array，现场可编程门阵列）、NPU（Neural Processing Unit，神经网络处理器）等异构硬件平台，围绕 LLM（Large Language Model，大语言模型）Inference（推理）的真实性能瓶颈展开系统分析与优化。
+EdgeLLM-Systems（边缘大模型推理系统）是一个面向资源受限边缘环境的大模型推理系统研究项目，聚焦部署边界、性能瓶颈、软件优化与异构硬件加速。项目面向单卡 GPU（Graphics Processing Unit，图形处理器）、边缘服务器、小型工作站、FPGA（Field Programmable Gate Array，现场可编程门阵列）、NPU（Neural Processing Unit，神经网络处理器）等异构硬件平台，围绕 LLM（Large Language Model，大语言模型）Inference（推理）的真实性能瓶颈展开系统分析与优化。
 
 项目关注的核心问题是：
 

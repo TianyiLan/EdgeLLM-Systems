@@ -1,7 +1,7 @@
 experiment_name: exp001_gemma2_t4_pkv
 model_id: google/gemma-2-2b-it
-model_dir: /content/drive/MyDrive/HeteroInfer_Lab/models
-output_csv: /content/drive/MyDrive/HeteroInfer_Lab/results/exp001/exp001_results_pkv.csv
+model_dir: /content/drive/MyDrive/EdgeLLM-Systems/models
+output_csv: /content/drive/MyDrive/EdgeLLM-Systems/results/exp001/exp001_results_pkv.csv
 torch_dtype: float16
 device_map: auto
 

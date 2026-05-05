@@ -3,9 +3,9 @@
 This directory contains standard benchmark entrypoints and configs.
 
 Benchmark scripts should read a config, call reusable utilities from
-`heteroinfer_lab`, and write structured outputs such as CSV files. Low-level
+`edge_llm_systems`, and write structured outputs such as CSV files. Low-level
 model loading, prompt construction, CUDA cleanup, and KV cache accounting should
-stay in `heteroinfer_lab`.
+stay in `edge_llm_systems`.
 
 Current benchmark:
 

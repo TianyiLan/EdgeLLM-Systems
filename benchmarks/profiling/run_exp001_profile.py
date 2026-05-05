@@ -16,20 +16,20 @@ if str(ROOT) not in sys.path:
     # Allow running this file directly from the repo root or from Colab.
     sys.path.insert(0, str(ROOT))
 
-from heteroinfer_lab.cuda_utils import (  # noqa: E402
+from edge_llm_systems.cuda_utils import (  # noqa: E402
     cleanup_cuda,
     require_cuda,
     reset_peak_memory_stats,
     synchronize_if_cuda,
 )
-from heteroinfer_lab.kv_cache import (  # noqa: E402
+from edge_llm_systems.kv_cache import (  # noqa: E402
     estimate_kv_cache_mb,
     kv_cache_size_from_past_key_values_mb,
 )
-from heteroinfer_lab.memory import get_peak_gpu_memory_mb  # noqa: E402
-from heteroinfer_lab.metrics import mean_metric, tokens_per_second  # noqa: E402
-from heteroinfer_lab.models import load_causal_lm  # noqa: E402
-from heteroinfer_lab.prompts import build_prompt_inputs  # noqa: E402
+from edge_llm_systems.memory import get_peak_gpu_memory_mb  # noqa: E402
+from edge_llm_systems.metrics import mean_metric, tokens_per_second  # noqa: E402
+from edge_llm_systems.models import load_causal_lm  # noqa: E402
+from edge_llm_systems.prompts import build_prompt_inputs  # noqa: E402
 
 
 FIELDNAMES = [

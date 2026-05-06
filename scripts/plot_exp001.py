@@ -11,9 +11,36 @@ import matplotlib.ticker as ticker
 import pandas as pd
 
 
-def plot_exp001(csv_path: Path, output_path: Path) -> None:
+def _detect_hardware_label() -> str:
+    """Return the current CUDA device name for figure titles when available."""
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            return torch.cuda.get_device_name(0)
+    except Exception:
+        pass
+    return "GPU unknown"
+
+
+def _detect_gpu_memory_gb() -> int:
+    """Return total GPU memory in whole GB, or 16 as a safe default."""
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            props = torch.cuda.get_device_properties(0)
+            return round(props.total_memory / 1024**3)
+    except Exception:
+        pass
+    return 16
+
+
+def plot_exp001(csv_path: Path, output_path: Path, hardware_label: str | None = None) -> None:
     """Create the Experiment 001 PKV overview figure."""
     # The plotting script consumes a result CSV only. It does not rerun models.
+    if hardware_label is None:
+        hardware_label = _detect_hardware_label()
     df = pd.read_csv(csv_path)
 
     # Use linear x-axis spacing so prompt length growth is visually meaningful.
@@ -26,7 +53,7 @@ def plot_exp001(csv_path: Path, output_path: Path) -> None:
     fig = plt.figure(figsize=(18, 10))
     fig.suptitle(
         "Experiment 001 PKV: Gemma 2-2B Profiling\n"
-        "(Tesla T4, FP16, KV from past_key_values)",
+        f"({hardware_label}, FP16, KV from past_key_values)",
         fontsize=13,
         fontweight="bold",
     )
@@ -88,7 +115,8 @@ def plot_exp001(csv_path: Path, output_path: Path) -> None:
             label=f"gen={gl}",
             linewidth=2,
         )
-    ax3.axhline(y=16 * 1024, color="red", linestyle="--", alpha=0.5, label="T4 limit")
+    gpu_mem_gb = _detect_gpu_memory_gb()
+    ax3.axhline(y=gpu_mem_gb * 1024, color="red", linestyle="--", alpha=0.5, label=f"{gpu_mem_gb} GB limit")
     ax3.set_xlabel("Prompt Length (tokens)")
     ax3.set_ylabel("Peak GPU Memory (MB)")
     ax3.set_title("3. Peak Memory vs Prompt Length")

@@ -71,16 +71,23 @@ EdgeLLM-Systems 当前聚焦以下方向：
 
 ## Current Status
 
-项目已完成第一阶段 baseline profiling 与 KV Cache 测量协议校准，后续任务状态以 `docs/roadmap.md`、`docs/experiment_log.md` 以及 GitHub Issues 为准。
+The project has completed Stage 1A baseline profiling and KV cache measurement protocol calibration with Gemma 2 2B IT on Google Colab Tesla T4.
 
-当前已完成的关键基础包括：
+Current Stage 1 work is now split into:
 
-- 建立 Gemma 2 2B Instruct 在 Colab + Tesla T4 环境下的 baseline profiling 流程
-- 测量 TTFT（Time To First Token，首 token 延迟）、TPOT（Time Per Output Token，单 token 延迟）、tokens/s、peak GPU memory 等基础指标
-- 修正原 CUDA memory-delta KV Cache 测量方法中的 non-KV runtime overhead 问题
-- 使用 `past_key_values` payload 作为 pure KV cache measurement protocol
-- 验证 PKV measured KV cache 与 theoretical formula 高度一致
-- 将 CUDA peak memory 明确区分为 system-level memory pressure 指标
+- **Stage 1A: Experiment 001A / PKV Modular Baseline**  
+  Completed. The final trusted baseline uses `past_key_values` payload accounting as the primary pure KV cache metric. CUDA peak memory is treated as a system-level memory pressure metric rather than pure KV cache.
+
+- **Stage 1B: Experiment 001B / Gemma Model-Scale Stress Baseline**  
+  In progress. The current v2.1 results show that Gemma 2 2B IT FP16 completes the T4 test matrix and remains consistent with the Stage 1A baseline, while Gemma 2 9B IT FP16 triggers CUDA OOM during model loading. This provides early evidence for the T4 FP16 deployment boundary.
+
+Key current artifacts:
+
+- Stage 1A final CSV: `results/exp001/csv/exp001_results_pkv_modular.csv`
+- Stage 1A final figure: `results/exp001/figures/exp001_profiling_results_pkv_modular.png`
+- Stage 1B results: `results/exp001b/`
+
+Stage 1 should not be described as fully closed until the remaining Stage 1B scope, especially whether to add Gemma 4 probing, is explicitly finalized.
 
 ---
 
